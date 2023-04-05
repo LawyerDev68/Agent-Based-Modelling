@@ -6,10 +6,11 @@ from mesa.space import MultiGrid
 from mesa.datacollection import DataCollector
 
 class Patent:
-    def __init__(self, model, licensor, price):
+    def __init__(self, model, licensor, price, creation_step):
         self.unique_id = model.next_id()
         self.licensor = licensor
         self.price = price
+        self.creation_step = creation_step
         
     def step(self):
         pass
@@ -29,9 +30,14 @@ class Licensor(Agent):
     def step(self):
         if random.random() < self.model.patent_creation_chance:
             price = random.randint(5, 10)
-            patent = Patent(self.model, self, price)
+            patent = Patent(self.model, self, price, self.model.schedule.steps)
+            self.patents = [patent for patent in self.patents if self.model.schedule.steps - patent.creation_step < self.model.patent_expiration_steps]
             self.patents.append(patent)
-            self.model.schedule.add(patent)
+        for patent in list(self.patents):
+            if self.model.schedule.time - patent.creation_step >= self.model.patent_expiration_steps:
+                self.patents.remove(patent)
+        
+
 
 
 class Licensee(Agent):
@@ -41,6 +47,7 @@ class Licensee(Agent):
         self.licenses = []
 
     def step(self):
+        self.licenses = [patent for patent in self.licenses if self.model.schedule.steps - patent.creation_step < self.model.patent_expiration_steps]
         licensor = random.choice(self.model.schedule.agents)
         if self.money > 0 and isinstance(licensor, Licensor):
             available_patents = [patent for patent in licensor.patents]
@@ -54,6 +61,9 @@ class Licensee(Agent):
         # Add chance of money increase
         if random.random() < 0.5:
             self.money += random.randint(1, 5)
+        for license in list(self.licenses):
+            if self.model.schedule.time - license.creation_step >= self.model.patent_expiration_steps:
+                self.licenses.remove(license)
 
     def __str__(self):
         return f'Licensee {self.unique_id}: money={self.money}, licenses={len(self.licenses)}'
@@ -73,6 +83,7 @@ class PatentModel(Model):
         height,
         initial_licensee_money,
         patent_creation_chance,
+        patent_expiration_steps,
     ):
         self.num_agents = num_licensors + num_licensees
         self.grid = MultiGrid(width, height, True)
@@ -80,6 +91,7 @@ class PatentModel(Model):
         self.current_id = 0
         self.initial_licensee_money = initial_licensee_money
         self.patent_creation_chance = patent_creation_chance
+        self.patent_expiration_steps = patent_expiration_steps
 
         # Create and add Licensors and Licensees to the schedule
         for i in range(num_licensors):

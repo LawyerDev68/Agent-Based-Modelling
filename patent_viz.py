@@ -33,11 +33,16 @@ patent_creation_chance_slider = UserSettableParameter(
     "slider", "Patent Creation Chance", 0.6, 0, 1, 0.01, description="Chance of new patent creation by licensor"
 )
 
+patent_expiration_steps_slider = UserSettableParameter('slider', 'Patent Expiration Steps', value=20, min_value=0, max_value=100, step=1, description="Number of steps before a patent expires")
+
+
 # Set up the server
 server = ModularServer(PatentModel,
                        [grid, chart],
                        "Patent Model",
-                       {"num_licensors": 20, "num_licensees": 80, "width": grid_width, "height": grid_height, "initial_licensee_money" : licensee_money_slider, "patent_creation_chance": patent_creation_chance_slider})
+                       {"num_licensors": 20, "num_licensees": 80, "width": grid_width, "height": grid_height, "initial_licensee_money" : licensee_money_slider, "patent_creation_chance": patent_creation_chance_slider, "patent_expiration_steps" : patent_expiration_steps_slider})
+
+
 
 server.port = 8521  # Set the port to a custom value to avoid potential conflicts
 server.launch()
